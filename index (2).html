@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 Operations &amp; Project Calendar</title>
+<style>
+  :root {
+    /* WEI Brand Colors extracted from reference deck */
+    --blue:       #2196F3;
+    --blue-dark:  #1565C0;
+    --blue-light: #E3F2FD;
+    --blue-mid:   #1E88E5;
+    --teal:       #3D8B7A;
+    --teal-light: #E0F2EF;
+    --red:        #B71C1C;
+    --red-light:  #FFEBEE;
+    --gold:       #F9A825;
+    --gold-light: #FFF8E1;
+    --white:      #FFFFFF;
+    --bg:         #F7F9FC;
+    --border:     #E0E7EF;
+    --text:       #1F2D3D;
+    --muted:      #6B7FA3;
+    --label:      #3D7AB3;
+
+    /* Function colors — WEI palette */
+    --comp:   #2196F3;
+    --ret:    #3D8B7A;
+    --hw:     #7B1FA2;
+    --board:  #E65100;
+    --proj:   #37474F;
+
+    --complete:  #2E7D32;
+    --inprog:    #F9A825;
+    --notstart:  #9E9E9E;
+    --milestone: #B71C1C;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────────── */
+  .header {
+    background: var(--white);
+    border-bottom: 3px solid var(--blue);
+    padding: 0 40px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(33,150,243,0.08);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 18px 0;
+    border-left: 5px solid var(--blue);
+    padding-left: 18px;
+  }
+
+  .header-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .header-title span { color: var(--blue); }
+
+  .header-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 0;
+  }
+
+  .view-btn {
+    padding: 7px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--white);
+    color: var(--muted);
+    transition: all 0.18s;
+    letter-spacing: 0.02em;
+  }
+
+  .view-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  .view-btn.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: var(--white);
+  }
+
+  /* ── FILTER BAR ──────────────────────────────────────────────── */
+  .filter-bar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 40px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-right: 4px;
+  }
+
+  .filter-chip {
+    padding: 4px 12px;
+    border-radius: 3px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .filter-chip .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+
+  .filter-chip.active, .filter-chip:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: var(--blue-light);
+  }
+
+  /* ── MAIN ────────────────────────────────────────────────────── */
+  main { padding: 24px 40px 48px; }
+
+  /* ══ DETAIL VIEW (GANTT) ══════════════════════════════════════ */
+  #detail-view, #exec-view, #timeline-view { display: none; }
+
+  .gantt-wrap {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+
+  .gantt-head {
+    display: grid;
+    grid-template-columns: 240px 130px 90px 1fr;
+    background: var(--blue);
+    padding: 10px 16px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .gh-col {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .month-row {
+    display: flex;
+  }
+
+  .month-col {
+    flex: 1;
+    text-align: center;
+    font-size: 10px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .gantt-row {
+    display: grid;
+    grid-template-columns: 240px 130px 90px 1fr;
+    padding: 6px 16px;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    min-height: 38px;
+    transition: background 0.12s;
+  }
+
+  .gantt-row:last-child { border-bottom: none; }
+  .gantt-row:hover { background: var(--blue-light); }
+  .gantt-row.ms-row { background: #FFF8F8; }
+  .gantt-row.ms-row:hover { background: #FFEBEE; }
+
+  .task-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ms-row .task-name {
+    color: var(--milestone);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ms-row .task-name::before {
+    content: '◆';
+    font-size: 8px;
+    flex-shrink: 0;
+  }
+
+  .func-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .status-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .status-text {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .bar-track {
+    position: relative;
+    height: 22px;
+    display: flex;
+    align-items: center;
+  }
+
+  .month-grid-bg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+  }
+
+  .mg-cell {
+    flex: 1;
+    border-right: 1px solid var(--border);
+  }
+  .mg-cell:last-child { border-right: none; }
+  .mg-cell.q-start { border-left: 2px solid rgba(33,150,243,0.2); }
+
+  .task-bar {
+    position: absolute;
+    height: 12px;
+    border-radius: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    min-width: 3px;
+  }
+
+  .ms-diamond {
+    position: absolute;
+    width: 11px; height: 11px;
+    transform: translateY(-50%) rotate(45deg);
+    top: 50%;
+    z-index: 2;
+    margin-left: -5px;
+  }
+
+  /* Function badge colors */
+  .fc-comp  { background: rgba(33,150,243,0.12);  color: #1565C0; }
+  .fc-ret   { background: rgba(61,139,122,0.12);  color: #2E6B5C; }
+  .fc-hw    { background: rgba(123,31,162,0.12);  color: #6A1B9A; }
+  .fc-board { background: rgba(230,81,0,0.12);    color: #BF360C; }
+  .fc-proj  { background: rgba(55,71,79,0.12);    color: #263238; }
+
+  /* Bar colors */
+  .bar-comp  { background: var(--comp); }
+  .bar-ret   { background: var(--ret); }
+  .bar-hw    { background: var(--hw); }
+  .bar-board { background: var(--board); }
+  .bar-proj  { background: var(--proj); }
+  .bar-done  { opacity: 0.4; }
+
+  /* Status text badges */
+  .st-complete  { background: rgba(46,125,50,0.1);   color: var(--complete); }
+  .st-inprog    { background: rgba(249,168,37,0.13); color: #C17900; }
+  .st-notstart  { background: rgba(158,158,158,0.13);color: #5a5a5a; }
+  .st-milestone { background: rgba(183,28,28,0.1);   color: var(--milestone); }
+
+  /* ══ EXEC VIEW ════════════════════════════════════════════════ */
+  .exec-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--blue);
+    border-radius: 4px;
+    padding: 14px 20px;
+    flex: 1;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--blue);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .exec-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .q-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .q-head {
+    background: var(--blue);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .q-head.q2 { background: var(--teal); }
+  .q-head.q3 { background: #1565C0; }
+  .q-head.q4 { background: var(--text); }
+
+  .q-label { font-size: 18px; font-weight: 700; color: var(--white); }
+  .q-dates { font-size: 11px; color: rgba(255,255,255,0.75); }
+
+  .q-body { padding: 12px 16px 16px; }
+
+  .q-func-section { margin-bottom: 10px; }
+
+  .q-func-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .q-item {
+    font-size: 11px;
+    color: var(--text);
+    padding: 2px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    line-height: 1.4;
+  }
+
+  .q-item-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    margin-top: 5px; flex-shrink: 0;
+  }
+
+  .q-ms-item {
+    font-size: 11px;
+    color: var(--milestone);
+    font-weight: 700;
+    padding: 2px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    line-height: 1.4;
+  }
+
+  .q-ms-diamond {
+    font-size: 8px;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .ms-badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--milestone);
+    color: var(--white);
+    padding: 2px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  /* ══ TIMELINE VIEW ════════════════════════════════════════════ */
+  .tl-wrap {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+
+  .tl-header {
+    background: var(--blue);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .tl-header-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    width: 110px;
+    flex-shrink: 0;
+  }
+
+  .tl-months {
+    flex: 1;
+    display: flex;
+  }
+
+  .tl-month {
+    flex: 1;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 1px;
+  }
+
+  .tl-quarter-band {
+    display: flex;
+    gap: 16px;
+    padding: 0 16px;
+    background: rgba(33,150,243,0.06);
+    border-bottom: 2px solid var(--border);
+    align-items: stretch;
+  }
+
+  .tl-qb-label {
+    width: 110px;
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 5px 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .tl-qb-track {
+    flex: 1;
+    display: flex;
+    position: relative;
+    height: 28px;
+    align-items: center;
+  }
+
+  .tl-q-bar {
+    position: absolute;
+    height: 6px;
+    border-radius: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .tl-q-label {
+    position: absolute;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--white);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    padding-left: 6px;
+    z-index: 1;
+  }
+
+  .tl-func-row {
+    display: flex;
+    gap: 16px;
+    padding: 3px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    min-height: 46px;
+    transition: background 0.12s;
+  }
+
+  .tl-func-row:last-child { border-bottom: none; }
+  .tl-func-row:hover { background: var(--blue-light); }
+
+  .tl-func-label {
+    width: 110px;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tl-func-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  .tl-track {
+    flex: 1;
+    position: relative;
+    height: 40px;
+  }
+
+  .tl-month-grid {
+    position: absolute;
+    inset: 0;
+    display: flex;
+  }
+
+  .tl-mg-cell {
+    flex: 1;
+    border-right: 1px solid var(--border);
+  }
+
+  .tl-mg-cell:last-child { border-right: none; }
+  .tl-mg-cell.q-first { border-left: 2px solid rgba(33,150,243,0.25); }
+
+  .tl-bar {
+    position: absolute;
+    height: 10px;
+    border-radius: 2px;
+    z-index: 1;
+  }
+
+  .tl-milestone {
+    position: absolute;
+    width: 10px; height: 10px;
+    transform: rotate(45deg);
+    z-index: 2;
+    top: 50%;
+    margin-top: -5px;
+    margin-left: -5px;
+    cursor: default;
+  }
+
+  .tl-bar-label {
+    position: absolute;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--white);
+    z-index: 2;
+    white-space: nowrap;
+    overflow: hidden;
+    pointer-events: none;
+    padding: 0 3px;
+    line-height: 10px;
+  }
+
+  .tl-ms-label {
+    position: absolute;
+    font-size: 9px;
+    color: var(--milestone);
+    font-weight: 700;
+    z-index: 3;
+    white-space: nowrap;
+    top: 55%;
+    transform: translateX(-50%);
+  }
+
+  .tl-row-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* today line */
+  .today-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--gold);
+    z-index: 10;
+    opacity: 0.85;
+  }
+
+  /* ── LEGEND ──────────────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    padding: 12px 40px;
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .legend-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .legend-divider {
+    width: 1px; height: 16px;
+    background: var(--border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .legend-swatch {
+    width: 20px; height: 7px; border-radius: 2px;
+  }
+
+  .legend-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="header-title">2026 <span>Operations &amp; Project Calendar</span></div>
+      <div class="header-sub">Total Rewards &nbsp;|&nbsp; WEI</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="view-btn active" onclick="switchView('exec', this)">Executive</button>
+    <button class="view-btn" onclick="switchView('timeline', this)">Timeline</button>
+    <button class="view-btn" onclick="switchView('detail', this)">Detail</button>
+  </div>
+</div>
+
+<!-- FILTER BAR (Detail view only) -->
+<div class="filter-bar" id="filter-bar">
+  <span class="legend-lbl">Function</span>
+  <button class="filter-chip active" onclick="setFilter('func','all',this)"><span>All</span></button>
+  <button class="filter-chip" onclick="setFilter('func','Compensation',this)"><span class="dot" style="background:var(--comp)"></span>Compensation</button>
+  <button class="filter-chip" onclick="setFilter('func','Retirement',this)"><span class="dot" style="background:var(--ret)"></span>Retirement</button>
+  <button class="filter-chip" onclick="setFilter('func','Health & Welfare',this)"><span class="dot" style="background:var(--hw)"></span>H&amp;W</button>
+  <button class="filter-chip" onclick="setFilter('func','Board',this)"><span class="dot" style="background:var(--board)"></span>Board</button>
+  <button class="filter-chip" onclick="setFilter('func','Projects',this)"><span class="dot" style="background:var(--proj)"></span>Projects</button>
+
+  <div style="width:1px;height:20px;background:var(--border);margin:0 8px;flex-shrink:0"></div>
+
+  <span class="legend-lbl">Quarter</span>
+  <button class="filter-chip q-chip active" onclick="setFilter('quarter','all',this)">All</button>
+  <button class="filter-chip q-chip" onclick="setFilter('quarter','Q1',this)">Q1</button>
+  <button class="filter-chip q-chip" onclick="setFilter('quarter','Q2',this)">Q2</button>
+  <button class="filter-chip q-chip" onclick="setFilter('quarter','Q3',this)">Q3</button>
+  <button class="filter-chip q-chip" onclick="setFilter('quarter','Q4',this)">Q4</button>
+
+  <div style="width:1px;height:20px;background:var(--border);margin:0 8px;flex-shrink:0"></div>
+
+  <span class="legend-lbl">Month</span>
+  <select id="month-select" onchange="setMonthFilter(this.value)" style="
+    font-family:Arial,sans-serif;font-size:11px;font-weight:600;
+    padding:4px 10px;border:1.5px solid var(--border);border-radius:3px;
+    color:var(--muted);background:var(--white);cursor:pointer;
+    appearance:none;-webkit-appearance:none;
+    background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%228%22 height=%224%22><path d=%22M0 0l4 4 4-4z%22 fill=%22%236B7FA3%22/></svg>');
+    background-repeat:no-repeat;background-position:right 8px center;padding-right:22px;
+  ">
+    <option value="all">All Months</option>
+    <option value="0">January</option>
+    <option value="1">February</option>
+    <option value="2">March</option>
+    <option value="3">April</option>
+    <option value="4">May</option>
+    <option value="5">June</option>
+    <option value="6">July</option>
+    <option value="7">August</option>
+    <option value="8">September</option>
+    <option value="9">October</option>
+    <option value="10">November</option>
+    <option value="11">December</option>
+  </select>
+</div>
+
+<main>
+  <div id="detail-view"></div>
+  <div id="exec-view"></div>
+  <div id="timeline-view"></div>
+</main>
+
+
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const TASKS = [
+  {name:"Board Numbers Q4",func:"Board",status:"Complete",start:"2026-01-02",due:"2026-01-21"},
+  {name:"Survey Strategic Plan",func:"Compensation",status:"Complete",start:"2026-01-01",due:"2026-01-30"},
+  {name:"Entity Transition Planning",func:"Health & Welfare",status:"Complete",start:"2026-01-01",due:"2026-01-31"},
+  {name:"401(k) NDT",func:"Retirement",status:"Complete",start:"2026-01-22",due:"2026-02-12"},
+  {name:"401(k) YE Contributions",func:"Retirement",status:"Complete",start:"2026-01-08",due:"2026-02-13"},
+  {name:"Q4 Retirement Committee Meeting",func:"Retirement",status:"Milestone",start:null,due:"2026-02-16"},
+  {name:"SRV: Botoff E&HH",func:"Compensation",status:"In Progress",start:"2026-02-09",due:"2026-02-23"},
+  {name:"Auditor RFP",func:"Retirement",status:"In Progress",start:"2026-02-02",due:"2026-02-27"},
+  {name:"Family Board Prep",func:"Board",status:"In Progress",start:"2026-02-02",due:"2026-03-02"},
+  {name:"SRV: AON Grants",func:"Compensation",status:"In Progress",start:"2026-02-19",due:"2026-03-04"},
+  {name:"WEI Benefit Strategic Planning",func:"Health & Welfare",status:"In Progress",start:"2026-01-23",due:"2026-03-09"},
+  {name:"Family Board",func:"Board",status:"Milestone",start:null,due:"2026-03-10"},
+  {name:"Oxford Training",func:"Projects",status:"Not Started",start:"2026-02-27",due:"2026-03-10"},
+  {name:"401(k) Integration Files",func:"Projects",status:"In Progress",start:"2026-01-02",due:"2026-03-11"},
+  {name:"Re-level Accounting",func:"Compensation",status:"Not Started",start:"2026-01-15",due:"2026-03-18"},
+  {name:"ECA Bonus",func:"Compensation",status:"Milestone",start:null,due:"2026-03-20"},
+  {name:"Group Crosstesting",func:"Retirement",status:"Not Started",start:"2026-02-27",due:"2026-03-31"},
+  {name:"RxDC & AR128 Reporting",func:"Health & Welfare",status:"Not Started",start:"2026-03-10",due:"2026-03-31"},
+  {name:"Board Numbers Q1",func:"Board",status:"Not Started",start:"2026-04-01",due:"2026-04-21"},
+  {name:"Family Council Meeting",func:"Board",status:"Not Started",start:"2026-04-19",due:"2026-04-21"},
+  {name:"Re-level Tech",func:"Compensation",status:"Not Started",start:"2026-03-04",due:"2026-04-29"},
+  {name:"SRV: Botoff FO",func:"Compensation",status:"Not Started",start:"2026-04-16",due:"2026-05-01"},
+  {name:"Re-level WIT",func:"Compensation",status:"Not Started",start:"2026-03-19",due:"2026-05-14"},
+  {name:"Q1 Retirement Committee Meeting",func:"Retirement",status:"Milestone",start:null,due:"2026-05-15"},
+  {name:"SRV: Croner",func:"Compensation",status:"Not Started",start:"2026-04-22",due:"2026-05-19"},
+  {name:"SRV: NBAA",func:"Compensation",status:"Not Started",start:"2026-05-12",due:"2026-05-29"},
+  {name:"ECA Bonus",func:"Compensation",status:"Milestone",start:null,due:"2026-06-06"},
+  {name:"Re-level G2 Pilots + PH",func:"Compensation",status:"Not Started",start:"2026-06-01",due:"2026-06-30"},
+  {name:"Board Numbers Q2",func:"Board",status:"Not Started",start:"2026-07-01",due:"2026-07-21"},
+  {name:"WEI ELT Approvals",func:"Health & Welfare",status:"Milestone",start:null,due:"2026-07-31"},
+  {name:"401(k) Audit",func:"Retirement",status:"Not Started",start:"2026-04-02",due:"2026-07-31"},
+  {name:"WEI Benefits Design Process",func:"Health & Welfare",status:"Not Started",start:"2026-05-19",due:"2026-07-31"},
+  {name:"Promotions",func:"Compensation",status:"Not Started",start:"2026-06-09",due:"2026-07-31"},
+  {name:"FSA Testing",func:"Health & Welfare",status:"Not Started",start:"2026-07-01",due:"2026-08-01"},
+  {name:"Budgets Process",func:"Compensation",status:"Not Started",start:"2026-06-30",due:"2026-08-03"},
+  {name:"Family Board Call",func:"Board",status:"Milestone",start:null,due:"2026-08-06"},
+  {name:"Q2 Retirement Committee Meeting",func:"Retirement",status:"Milestone",start:null,due:"2026-08-17"},
+  {name:"WEI Board Approvals",func:"Health & Welfare",status:"Milestone",start:null,due:"2026-08-31"},
+  {name:"Data Reporting",func:"Projects",status:"Not Started",start:"2026-03-03",due:"2026-08-31"},
+  {name:"WEI Handoff",func:"Health & Welfare",status:"Milestone",start:null,due:"2026-09-12"},
+  {name:"PEO Transition - WEND",func:"Projects",status:"Not Started",start:"2026-05-29",due:"2026-09-14"},
+  {name:"SRV: Budgets - Croner, etc.",func:"Compensation",status:"Not Started",start:"2026-07-30",due:"2026-09-14"},
+  {name:"401(k) Form 5500 Filing",func:"Retirement",status:"Milestone",start:null,due:"2026-09-15"},
+  {name:"ECA Bonus",func:"Compensation",status:"Milestone",start:null,due:"2026-09-18"},
+  {name:"Family Board Prep",func:"Board",status:"Not Started",start:"2026-09-01",due:"2026-10-02"},
+  {name:"Family Board",func:"Board",status:"Milestone",start:null,due:"2026-10-15"},
+  {name:"WEI OE",func:"Health & Welfare",status:"Not Started",start:"2026-10-11",due:"2026-10-24"},
+  {name:"SRV: Sequoia",func:"Compensation",status:"Not Started",start:"2026-10-01",due:"2026-10-29"},
+  {name:"Compensation Design - NEW Structure",func:"Projects",status:"Not Started",start:"2026-04-01",due:"2026-11-05"},
+  {name:"Handoff #1",func:"Health & Welfare",status:"Milestone",start:null,due:"2026-11-07"},
+  {name:"Handoff #2",func:"Health & Welfare",status:"Milestone",start:null,due:"2026-11-14"},
+  {name:"Q3 Retirement Committee Meeting",func:"Retirement",status:"Milestone",start:null,due:"2026-11-16"},
+  {name:"Handoff #3",func:"Health & Welfare",status:"Milestone",start:null,due:"2026-11-21"},
+  {name:"Board Numbers Q3",func:"Board",status:"Not Started",start:"2026-11-01",due:"2026-11-21"},
+  {name:"Family Council Meeting",func:"Board",status:"Not Started",start:"2026-11-19",due:"2026-11-21"},
+  {name:"Annual Merit Process",func:"Compensation",status:"Not Started",start:"2026-08-31",due:"2026-11-30"},
+  {name:"Entity OE #1",func:"Health & Welfare",status:"Not Started",start:"2026-11-22",due:"2026-12-05"},
+  {name:"Entity OE #2",func:"Health & Welfare",status:"Not Started",start:"2026-11-29",due:"2026-12-12"},
+  {name:"Entities Design Process (2026)",func:"Health & Welfare",status:"Not Started",start:"2026-10-08",due:"2026-12-18"},
+  {name:"Entity OE #3",func:"Health & Welfare",status:"Not Started",start:"2026-12-12",due:"2026-12-19"},
+  {name:"ECA Bonus",func:"Compensation",status:"Milestone",start:null,due:"2026-12-25"},
+  {name:"Executive Comp Process",func:"Compensation",status:"Not Started",start:"2026-09-24",due:"2026-12-30"},
+  {name:"NQDC Enrollment Process",func:"Retirement",status:"Not Started",start:"2026-10-30",due:"2026-12-30"},
+  {name:"LTIP Process",func:"Retirement",status:"Not Started",start:"2026-12-01",due:"2026-12-31"},
+  {name:"Year-End",func:"Retirement",status:"Not Started",start:"2026-12-07",due:"2027-01-01"},
+];
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const YEAR_START = new Date("2026-01-01");
+const YEAR_END   = new Date("2026-12-31");
+const YEAR_DAYS  = 365;
+const FUNCS = ["Compensation","Retirement","Health & Welfare","Board","Projects"];
+
+const FC_MAP = {
+  "Compensation":    "comp",
+  "Retirement":      "ret",
+  "Health & Welfare":"hw",
+  "Board":           "board",
+  "Projects":        "proj",
+};
+
+const FC_COLOR = {
+  "Compensation":    "var(--comp)",
+  "Retirement":      "var(--ret)",
+  "Health & Welfare":"var(--hw)",
+  "Board":           "var(--board)",
+  "Projects":        "var(--proj)",
+};
+
+function doy(dateStr) {
+  return Math.max(0, Math.floor((new Date(dateStr) - YEAR_START) / 86400000));
+}
+
+function pct(d) {
+  return Math.max(0, Math.min(100, (d / YEAR_DAYS) * 100));
+}
+
+function statusBadge(status) {
+  if(status === 'Complete')    return `<span class="status-text st-complete">Complete</span>`;
+  if(status === 'In Progress') return `<span class="status-text st-inprog">In Progress</span>`;
+  if(status === 'Milestone')   return `<span class="status-text st-milestone">Milestone</span>`;
+  return `<span class="status-text st-notstart">Not Started</span>`;
+}
+
+function makeMonthGrid() {
+  return MONTHS.map((_, i) => {
+    const isQstart = i % 3 === 0;
+    return `<div class="mg-cell${isQstart?' q-start':''}"></div>`;
+  }).join('');
+}
+
+function makeTLMonthGrid() {
+  return MONTHS.map((_, i) => {
+    const isQfirst = i % 3 === 0;
+    return `<div class="tl-mg-cell${isQfirst?' q-first':''}"></div>`;
+  }).join('');
+}
+
+// today position
+const todayDay = doy(new Date().toISOString().split('T')[0]);
+const todayPct = pct(todayDay);
+
+let activeFilter = 'all';
+let activeQuarter = 'all';
+let activeMonth = 'all';
+let activeView = 'exec';
+
+function setFilter(type, val, btn) {
+  if(type === 'func') {
+    document.querySelectorAll('.filter-chip:not(.q-chip)').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = val;
+  } else if(type === 'quarter') {
+    document.querySelectorAll('.q-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeQuarter = val;
+    // Reset month when quarter changes
+    activeMonth = 'all';
+    document.getElementById('month-select').value = 'all';
+  }
+  renderDetail();
+}
+
+function setMonthFilter(val) {
+  activeMonth = val;
+  // Reset quarter chip when month selected
+  if(val !== 'all') {
+    document.querySelectorAll('.q-chip').forEach(b => b.classList.remove('active'));
+    activeQuarter = 'all';
+  }
+  renderDetail();
+}
+
+function getFilteredTasks() {
+  return TASKS.filter(t => {
+    // Function filter
+    if(activeFilter !== 'all' && t.func !== activeFilter) return false;
+    // Quarter filter
+    if(activeQuarter !== 'all') {
+      const qMap = {Q1:[0,1,2], Q2:[3,4,5], Q3:[6,7,8], Q4:[9,10,11]};
+      const taskMonth = new Date(t.due).getMonth();
+      if(!qMap[activeQuarter].includes(taskMonth)) return false;
+    }
+    // Month filter — match start date month
+    if(activeMonth !== 'all') {
+      const startMonth = t.start ? new Date(t.start).getMonth() : new Date(t.due).getMonth();
+      const dueMonth   = new Date(t.due).getMonth();
+      const m = parseInt(activeMonth);
+      // Include if task spans or starts/ends in selected month
+      if(startMonth !== m && dueMonth !== m) {
+        if(t.start) {
+          const sd = new Date(t.start).getMonth();
+          const ed = new Date(t.due).getMonth();
+          if(!(sd <= m && ed >= m)) return false;
+        } else return false;
+      }
+    }
+    return true;
+  });
+}
+
+function switchView(v, btn) {
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeView = v;
+  ['detail','exec','timeline'].forEach(id => {
+    document.getElementById(id+'-view').style.display = 'none';
+  });
+  const fb = document.getElementById('filter-bar');
+  fb.style.display = v === 'detail' ? 'flex' : 'none';
+  document.getElementById(v+'-view').style.display = 'block';
+  if(v === 'detail')   renderDetail();
+  if(v === 'exec')     renderExec();
+  if(v === 'timeline') renderTimeline();
+}
+
+// ── DETAIL VIEW ───────────────────────────────────────────────────────────────
+function renderDetail() {
+  // Filter then sort by start date ascending
+  const tasks = getFilteredTasks().slice().sort((a, b) => {
+    const ad = a.start ? new Date(a.start) : new Date(a.due);
+    const bd = b.start ? new Date(b.start) : new Date(b.due);
+    return ad - bd;
+  });
+  const el = document.getElementById('detail-view');
+
+  if(tasks.length === 0) {
+    el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">No items match the selected filters.</div>`;
+    return;
+  }
+
+  const rows = tasks.map(t => {
+    const fc   = FC_MAP[t.func] || 'proj';
+    const isMS = t.status === 'Milestone';
+    const isDone = t.status === 'Complete';
+
+    let barHtml = '';
+    if(isMS) {
+      const p = pct(doy(t.due));
+      barHtml = `<div class="ms-diamond" style="left:${p}%;background:var(--milestone)"></div>`;
+    } else if(t.start) {
+      const sd = doy(t.start);
+      const ed = Math.min(doy(t.due), YEAR_DAYS);
+      const l  = pct(sd);
+      const w  = Math.max(0.4, pct(ed - sd));
+      barHtml  = `<div class="task-bar bar-${fc}${isDone?' bar-done':''}" style="left:${l}%;width:${w}%"></div>`;
+    }
+
+    const statusHtml = statusBadge(t.status);
+
+    return `<div class="gantt-row${isMS?' ms-row':''}">
+      <div class="task-name">${t.name}</div>
+      <div><span class="func-badge fc-${fc}">${t.func}</span></div>
+      <div class="status-cell">${statusHtml}</div>
+      <div class="bar-track">
+        <div class="month-grid-bg">${makeMonthGrid()}</div>
+        <div class="today-line" style="left:${todayPct}%"></div>
+        ${barHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="gantt-wrap">
+    <div class="gantt-head">
+      <div class="gh-col">Objective</div>
+      <div class="gh-col">Function</div>
+      <div class="gh-col">Status</div>
+      <div class="gh-col">
+        <div class="month-row">${MONTHS.map(m=>`<div class="month-col">${m}</div>`).join('')}</div>
+      </div>
+    </div>
+    ${rows}
+  </div>`;
+}
+
+// ── EXEC VIEW ─────────────────────────────────────────────────────────────────
+function renderExec() {
+  const complete  = TASKS.filter(t => t.status === 'Complete').length;
+  const inprog    = TASKS.filter(t => t.status === 'In Progress').length;
+  const milestones= TASKS.filter(t => t.status === 'Milestone').length;
+  const notstart  = TASKS.filter(t => t.status === 'Not Started').length;
+
+  const quarters = [
+    {label:"Q1",dates:"Jan – Mar",cls:"q1",months:[0,1,2]},
+    {label:"Q2",dates:"Apr – Jun",cls:"q2",months:[3,4,5]},
+    {label:"Q3",dates:"Jul – Sep",cls:"q3",months:[6,7,8]},
+    {label:"Q4",dates:"Oct – Dec",cls:"q4",months:[9,10,11]},
+  ];
+
+  function inQ(task, months) {
+    return months.includes(new Date(task.due).getMonth());
+  }
+
+  const qCards = quarters.map(q => {
+    const qtasks = TASKS.filter(t => inQ(t, q.months));
+    const mCount = qtasks.filter(t => t.status === 'Milestone').length;
+
+    const sections = FUNCS.map(f => {
+      const items = qtasks.filter(t => t.func === f).slice().sort((a,b) => {
+        const ad = a.start ? new Date(a.start) : new Date(a.due);
+        const bd = b.start ? new Date(b.start) : new Date(b.due);
+        return ad - bd;
+      });
+      if(!items.length) return '';
+      const color = FC_COLOR[f];
+      return `<div class="q-func-section">
+        <div class="q-func-label" style="color:${color}">${f}</div>
+        ${items.map(t => t.status === 'Milestone'
+          ? `<div class="q-ms-item"><span class="q-ms-diamond">◆</span>${t.name}</div>`
+          : `<div class="q-item"><div class="q-item-dot" style="background:${color}"></div>${t.name}</div>`
+        ).join('')}
+      </div>`;
+    }).join('');
+
+    return `<div class="q-card">
+      <div class="q-head ${q.cls}">
+        <div class="q-label">${q.label}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="q-dates">${q.dates}</div>
+          <div class="ms-badge">${mCount} Milestones</div>
+        </div>
+      </div>
+      <div class="q-body">${sections || '<div style="font-size:11px;color:var(--muted);padding:6px 0">No items</div>'}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('exec-view').innerHTML = `
+    <div class="exec-stats">
+      <div class="stat-card"><div class="stat-num">${TASKS.length}</div><div class="stat-label">Total Objectives</div></div>
+      <div class="stat-card" style="border-top-color:var(--complete)"><div class="stat-num" style="color:var(--complete)">${complete}</div><div class="stat-label">Complete</div></div>
+      <div class="stat-card" style="border-top-color:var(--inprog)"><div class="stat-num" style="color:var(--inprog)">${inprog}</div><div class="stat-label">In Progress</div></div>
+      <div class="stat-card" style="border-top-color:var(--notstart)"><div class="stat-num" style="color:var(--notstart)">${notstart}</div><div class="stat-label">Not Started</div></div>
+      <div class="stat-card" style="border-top-color:var(--milestone)"><div class="stat-num" style="color:var(--milestone)">${milestones}</div><div class="stat-label">Milestones</div></div>
+    </div>
+    <div class="exec-grid">${qCards}</div>`;
+}
+
+// ── TIMELINE VIEW ─────────────────────────────────────────────────────────────
+function renderTimeline() {
+  const LANE_H = 22;
+  const LANE_PAD = 4;
+
+  const monthHeader = `<div class="tl-header">
+    <div class="tl-header-label">Function</div>
+    <div class="tl-months">
+      ${MONTHS.map((m,i) => `<div class="tl-month">${m}</div>`).join('')}
+    </div>
+  </div>`;
+
+  const qBands = [
+    {label:"Q1",start:0,end:90,color:"var(--blue)"},
+    {label:"Q2",start:90,end:181,color:"var(--teal)"},
+    {label:"Q3",start:181,end:273,color:"#1565C0"},
+    {label:"Q4",start:273,end:365,color:"var(--text)"},
+  ];
+
+  const qBandHtml = `<div class="tl-quarter-band">
+    <div class="tl-qb-label">Quarter</div>
+    <div class="tl-qb-track">
+      <div class="tl-month-grid">${makeTLMonthGrid()}</div>
+      <div class="today-line" style="left:${todayPct}%"></div>
+      ${qBands.map(q => {
+        const l = pct(q.start);
+        const w = pct(q.end - q.start);
+        return `<div class="tl-q-bar" style="left:${l}%;width:${w}%;background:${q.color}">
+          <span class="tl-q-label">${q.label}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  const funcRows = FUNCS.map(fn => {
+    const color = FC_COLOR[fn];
+    const fc = FC_MAP[fn];
+
+    // Sort by start date
+    const tasksCopy = TASKS
+      .filter(t => t.func === fn)
+      .map(t => ({...t}))
+      .sort((a, b) => {
+        const ad = a.start ? new Date(a.start) : new Date(a.due);
+        const bd = b.start ? new Date(b.start) : new Date(b.due);
+        return ad - bd;
+      });
+
+    // Lane packing — milestones treated as a short bar for spacing
+    // Use a wider phantom width for milestones to avoid label collision
+    function assignLanes(tasks) {
+      const laneEnds = []; // end day per lane
+      tasks.forEach(t => {
+        const isMS = t.status === 'Milestone';
+        const sd = t.start ? doy(t.start) : doy(t.due);
+        // milestones occupy ~60 days of visual space to account for label
+        const ed = isMS ? doy(t.due) + 60 : Math.min(doy(t.due), YEAR_DAYS);
+        let placed = false;
+        for(let li = 0; li < laneEnds.length; li++) {
+          if(laneEnds[li] <= sd) {
+            laneEnds[li] = ed;
+            t._lane = li;
+            placed = true;
+            break;
+          }
+        }
+        if(!placed) {
+          t._lane = laneEnds.length;
+          laneEnds.push(ed);
+        }
+      });
+      return laneEnds.length;
+    }
+
+    const laneCount = assignLanes(tasksCopy);
+    const rowH = Math.max(36, laneCount * (LANE_H + LANE_PAD) + LANE_PAD * 2);
+
+    const bars = tasksCopy.map(t => {
+      const isMS   = t.status === 'Milestone';
+      const isDone = t.status === 'Complete';
+      const laneY  = LANE_PAD + t._lane * (LANE_H + LANE_PAD);
+      const centerY = laneY + LANE_H / 2;
+
+      if(isMS) {
+        const p = pct(doy(t.due));
+        // Diamond + label inline, label clipped to remaining track width via overflow on parent
+        return `
+          <div style="position:absolute;left:${p}%;top:${laneY}px;height:${LANE_H}px;display:flex;align-items:center;gap:4px;z-index:3;max-width:calc(100% - ${p}%);overflow:hidden;">
+            <div style="width:9px;height:9px;min-width:9px;transform:rotate(45deg);background:var(--milestone);flex-shrink:0;"></div>
+            <span style="font-size:9px;font-weight:700;color:var(--milestone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.name}</span>
+          </div>`;
+      } else if(t.start) {
+        const sd = doy(t.start);
+        const ed = Math.min(doy(t.due), YEAR_DAYS);
+        const l  = pct(sd);
+        const w  = Math.max(0.5, pct(ed - sd));
+        const barColor = isDone ? 'rgba(33,150,243,0.28)' : color;
+        // Text always clipped inside bar — never outside
+        return `<div style="
+            position:absolute;
+            left:${l}%;width:${w}%;
+            top:${laneY}px;height:${LANE_H}px;
+            background:${barColor};
+            border-radius:3px;
+            display:flex;align-items:center;
+            overflow:hidden;
+            box-sizing:border-box;
+          " title="${t.name}">
+          <span style="
+            font-size:9px;font-weight:600;
+            color:#fff;
+            padding:0 5px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            max-width:100%;
+            display:block;
+          ">${t.name}</span>
+        </div>`;
+      }
+      return '';
+    }).join('');
+
+    return `<div class="tl-func-row">
+      <div class="tl-func-label">
+        <div class="tl-func-dot" style="background:${color}"></div>
+        <span style="color:${color};font-weight:700">${fn}</span>
+      </div>
+      <div class="tl-track" style="height:${rowH}px;overflow:hidden;">
+        <div class="tl-month-grid" style="height:${rowH}px">${makeTLMonthGrid()}</div>
+        <div class="today-line" style="left:${todayPct}%;height:${rowH}px"></div>
+        ${bars}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('timeline-view').innerHTML = `
+    <div class="tl-wrap">
+      ${monthHeader}
+      ${qBandHtml}
+      ${funcRows}
+    </div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.getElementById('filter-bar').style.display = 'none';
+document.getElementById('exec-view').style.display = 'block';
+renderExec();
+</script>
+</body>
+</html>
