@@ -211,7 +211,7 @@
     gap: 12px;
     align-items: center;
     border-bottom: 1px solid var(--border);
-    min-height: 38px;
+    min-height: 44px;
     transition: background 0.12s;
   }
 
@@ -268,9 +268,10 @@
 
   .bar-track {
     position: relative;
-    height: 22px;
+    height: 28px;
     display: flex;
     align-items: center;
+    overflow: visible;
   }
 
   .month-grid-bg {
@@ -848,6 +849,14 @@ const FC_COLOR = {
   "Projects":        "var(--proj)",
 };
 
+const FUNC_COLORS_HEX = {
+  "Compensation":    "#1565C0",
+  "Retirement":      "#2E6B5C",
+  "Health & Welfare":"#6A1B9A",
+  "Board":           "#BF360C",
+  "Projects":        "#263238",
+};
+
 function doy(dateStr) {
   return Math.max(0, Math.floor((new Date(dateStr) - YEAR_START) / 86400000));
 }
@@ -956,6 +965,11 @@ function switchView(v, btn) {
 }
 
 // ── DETAIL VIEW ───────────────────────────────────────────────────────────────
+function fmtDate(str) {
+  const d = new Date(str);
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
 function renderDetail() {
   // Filter then sort by start date ascending
   const tasks = getFilteredTasks().slice().sort((a, b) => {
@@ -978,13 +992,50 @@ function renderDetail() {
     let barHtml = '';
     if(isMS) {
       const p = pct(doy(t.due));
-      barHtml = `<div class="ms-diamond" style="left:${p}%;background:var(--milestone)"></div>`;
+      const dateLabel = fmtDate(t.due);
+      barHtml = `
+        <div class="ms-diamond" style="left:${p}%;background:var(--milestone)"></div>
+        <div style="
+          position:absolute;
+          left:calc(${p}% + 14px);
+          top:50%;transform:translateY(-50%);
+          font-size:9px;
+          font-weight:700;
+          color:var(--milestone);
+          white-space:nowrap;
+          pointer-events:none;
+        ">${dateLabel}</div>`;
     } else if(t.start) {
-      const sd = doy(t.start);
-      const ed = Math.min(doy(t.due), YEAR_DAYS);
-      const l  = pct(sd);
-      const w  = Math.max(0.4, pct(ed - sd));
-      barHtml  = `<div class="task-bar bar-${fc}${isDone?' bar-done':''}" style="left:${l}%;width:${w}%"></div>`;
+      const sd  = doy(t.start);
+      const ed  = Math.min(doy(t.due), YEAR_DAYS);
+      const l   = pct(sd);
+      const w   = Math.max(0.4, pct(ed - sd));
+      const fc2 = FUNC_COLORS_HEX[t.func] || '#37474F';
+      const startLbl = fmtDate(t.start);
+      const endLbl   = fmtDate(t.due);
+
+      barHtml = `
+        <div class="task-bar bar-${fc}${isDone?' bar-done':''}" style="left:${l}%;width:${w}%"></div>
+        <div style="
+          position:absolute;
+          right:calc(${100 - parseFloat(l)}% + 3px);
+          top:50%;transform:translateY(-50%);
+          font-size:9px;font-weight:600;
+          color:${fc2};
+          white-space:nowrap;
+          pointer-events:none;
+          opacity:0.85;
+        ">${startLbl}</div>
+        <div style="
+          position:absolute;
+          left:calc(${parseFloat(l) + parseFloat(w)}% + 3px);
+          top:50%;transform:translateY(-50%);
+          font-size:9px;font-weight:600;
+          color:${fc2};
+          white-space:nowrap;
+          pointer-events:none;
+          opacity:0.85;
+        ">${endLbl}</div>`;
     }
 
     const statusHtml = statusBadge(t.status);
