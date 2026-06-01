@@ -849,8 +849,16 @@ const TASKS = [
 ];
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const YEAR_START = new Date("2026-01-01");
-const YEAR_END   = new Date("2026-12-31");
+
+// Parse YYYY-MM-DD as local timezone (avoid UTC shifting bugs)
+function parseLocal(str) {
+  if(!str) return null;
+  const p = str.split('-');
+  return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+}
+
+const YEAR_START = parseLocal("2026-01-01");
+const YEAR_END   = parseLocal("2026-12-31");
 const YEAR_DAYS  = 365;
 const FUNCS = ["Compensation","Retirement","Health & Welfare","Board Support","Projects"];
 
@@ -879,7 +887,7 @@ const FUNC_COLORS_HEX = {
 };
 
 function doy(dateStr) {
-  return Math.max(0, Math.floor((new Date(dateStr) - YEAR_START) / 86400000));
+  return Math.max(0, Math.floor((parseLocal(dateStr) - YEAR_START) / 86400000));
 }
 
 function pct(d) {
@@ -907,8 +915,9 @@ function makeTLMonthGrid() {
   }).join('');
 }
 
-// today position
-const todayDay = doy(new Date().toISOString().split('T')[0]);
+// today position (local time)
+const _today = new Date();
+const todayDay = Math.max(0, Math.floor((new Date(_today.getFullYear(), _today.getMonth(), _today.getDate()) - YEAR_START) / 86400000));
 const todayPct = pct(todayDay);
 
 let activeFilter = 'all';
@@ -944,20 +953,18 @@ function setMonthFilter(val) {
 
 function getFilteredTasks() {
   const Q_RANGES = {
-    Q1: {start: new Date("2026-01-01"), end: new Date("2026-03-31")},
-    Q2: {start: new Date("2026-04-01"), end: new Date("2026-06-30")},
-    Q3: {start: new Date("2026-07-01"), end: new Date("2026-09-30")},
-    Q4: {start: new Date("2026-10-01"), end: new Date("2026-12-31")},
+    Q1: {start: parseLocal("2026-01-01"), end: parseLocal("2026-03-31")},
+    Q2: {start: parseLocal("2026-04-01"), end: parseLocal("2026-06-30")},
+    Q3: {start: parseLocal("2026-07-01"), end: parseLocal("2026-09-30")},
+    Q4: {start: parseLocal("2026-10-01"), end: parseLocal("2026-12-31")},
   };
 
   return TASKS.filter(t => {
-    // Function filter — exact match
     if(activeFilter !== 'all' && t.func !== activeFilter) return false;
 
-    const sd = t.start ? new Date(t.start) : new Date(t.due);
-    const ed = new Date(t.due);
+    const sd = parseLocal(t.start || t.due);
+    const ed = parseLocal(t.due);
 
-    // Quarter filter — task is active if it spans ANY day in the quarter
     if(activeQuarter !== 'all') {
       const q = Q_RANGES[activeQuarter];
       if(t.status === 'Milestone') {
@@ -967,7 +974,6 @@ function getFilteredTasks() {
       }
     }
 
-    // Month filter — task is active if it spans ANY day in the selected month
     if(activeMonth !== 'all') {
       const m = parseInt(activeMonth);
       const mStart = new Date(2026, m, 1);
@@ -1000,15 +1006,17 @@ function switchView(v, btn) {
 
 // ── DETAIL VIEW ───────────────────────────────────────────────────────────────
 function fmtDate(str) {
-  const d = new Date(str);
-  return `${d.getMonth()+1}/${d.getDate()}`;
+  // Parse YYYY-MM-DD directly - never via Date object - to avoid any timezone interpretation
+  if(!str) return '';
+  const p = str.split('-');
+  return `${parseInt(p[1])}/${parseInt(p[2])}`;
 }
 
 function renderDetail() {
   // Filter then sort by start date ascending
   const tasks = getFilteredTasks().slice().sort((a, b) => {
-    const ad = a.start ? new Date(a.start) : new Date(a.due);
-    const bd = b.start ? new Date(b.start) : new Date(b.due);
+    const ad = a.start ? parseLocal(a.start) : parseLocal(a.due);
+    const bd = b.start ? parseLocal(b.start) : parseLocal(b.due);
     return ad - bd;
   });
   const el = document.getElementById('detail-view');
@@ -1107,20 +1115,20 @@ function renderExec() {
   const notstart   = TASKS.filter(t => t.status === 'Not Started').length;
 
   const Q_RANGES = [
-    {label:"Q1", dates:"Jan – Mar", cls:"q1", start:new Date("2026-01-01"), end:new Date("2026-03-31")},
-    {label:"Q2", dates:"Apr – Jun", cls:"q2", start:new Date("2026-04-01"), end:new Date("2026-06-30")},
-    {label:"Q3", dates:"Jul – Sep", cls:"q3", start:new Date("2026-07-01"), end:new Date("2026-09-30")},
-    {label:"Q4", dates:"Oct – Dec", cls:"q4", start:new Date("2026-10-01"), end:new Date("2026-12-31")},
+    {label:"Q1", dates:"Jan – Mar", cls:"q1", start:parseLocal("2026-01-01"), end:parseLocal("2026-03-31")},
+    {label:"Q2", dates:"Apr – Jun", cls:"q2", start:parseLocal("2026-04-01"), end:parseLocal("2026-06-30")},
+    {label:"Q3", dates:"Jul – Sep", cls:"q3", start:parseLocal("2026-07-01"), end:parseLocal("2026-09-30")},
+    {label:"Q4", dates:"Oct – Dec", cls:"q4", start:parseLocal("2026-10-01"), end:parseLocal("2026-12-31")},
   ];
 
   // A task is active in a quarter if it spans any day within that quarter window
   function taskInQ(t, q) {
     if(t.status === 'Milestone') {
-      const d = new Date(t.due);
+      const d = parseLocal(t.due);
       return d >= q.start && d <= q.end;
     }
-    const sd = t.start ? new Date(t.start) : new Date(t.due);
-    const ed = new Date(t.due);
+    const sd = t.start ? parseLocal(t.start) : parseLocal(t.due);
+    const ed = parseLocal(t.due);
     return sd <= q.end && ed >= q.start;
   }
 
@@ -1135,8 +1143,8 @@ function renderExec() {
 
     const sections = FUNCS.map(f => {
       const items = qtasks.filter(t => t.func === f).slice().sort((a,b) => {
-        const ad = a.start ? new Date(a.start) : new Date(a.due);
-        const bd = b.start ? new Date(b.start) : new Date(b.due);
+        const ad = a.start ? parseLocal(a.start) : parseLocal(a.due);
+        const bd = b.start ? parseLocal(b.start) : parseLocal(b.due);
         return ad - bd;
       });
       if(!items.length) return '';
@@ -1150,8 +1158,8 @@ function renderExec() {
           }
           // Determine span tags
           const spans = taskQuarters(t);
-          const startsHere = t.start ? new Date(t.start) >= q.start : false;
-          const endsHere   = new Date(t.due) <= q.end;
+          const startsHere = t.start ? parseLocal(t.start) >= q.start : false;
+          const endsHere   = parseLocal(t.due) <= q.end;
           const isContinued = !endsHere && spans.length > 1;
           const isCarryover = !startsHere && spans.length > 1;
 
@@ -1240,8 +1248,8 @@ function renderTimeline() {
       .filter(t => t.func === fn)
       .map(t => ({...t}))
       .sort((a, b) => {
-        const ad = a.start ? new Date(a.start) : new Date(a.due);
-        const bd = b.start ? new Date(b.start) : new Date(b.due);
+        const ad = a.start ? parseLocal(a.start) : parseLocal(a.due);
+        const bd = b.start ? parseLocal(b.start) : parseLocal(b.due);
         return ad - bd;
       });
 
